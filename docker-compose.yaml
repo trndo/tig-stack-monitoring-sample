@@ -1,0 +1,119 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - 8089:80
+    volumes:
+      - ./:/usr/src/app
+    depends_on:
+      - app
+    networks:
+      - tig
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/fpm/Dockerfile
+      args:
+        - USER_UID=${USER_UID:-1000}
+        - USER_GID=${USER_GID:-1000}
+    volumes:
+      - ./:/usr/src/app
+    depends_on:
+      - elasticsearch
+      - mongo
+    networks:
+      - tig
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.2
+    environment:
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - 9200:9200
+    volumes:
+      - elasticsearch:/usr/share/elasticsearch/data
+    networks:
+      - tig
+
+  mongo:
+    image: mongo:latest
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: pass
+    volumes:
+      - mongo:/data/db
+    networks:
+      - tig
+
+#Monitoriing stack
+  telegraf:
+    build:
+      context: .
+      dockerfile: docker/telegraf/Dockerfile
+      args:
+        - DOCKER_GID=${DOCKER_GID:-963}
+    volumes:
+      - ./docker/telegraf/config/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - influxdb
+      - elasticsearch
+      - mongo
+      - nginx
+      - app
+    links:
+      - influxdb
+    ports:
+      - 8125:8125
+    networks:
+      - tig
+
+  influxdb:
+    image: influxdb:1.8-alpine
+    env_file: docker/configuration.env
+    ports:
+      - '8086:8086'
+    volumes:
+      - influxdb:/var/lib/influxdb
+    networks:
+      - tig
+
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - influxdb
+    env_file: docker/configuration.env
+    links:
+      - influxdb
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana:/var/lib/grafana
+      - /monitoring/grafana/provisioning/:/etc/grafana/provisioning/
+      - /monitoring/grafana/services/grafana/dashboards/:/var/lib/grafana/dashboards/
+    networks:
+      - tig
+
+volumes:
+  grafana:
+    driver: local
+  influxdb:
+    driver: local
+  elasticsearch:
+    driver: local
+  mongo:
+    driver: local
+
+networks:
+  tig:
+    name: tig
