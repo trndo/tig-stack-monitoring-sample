@@ -7,7 +7,11 @@
         "php": ">=8.1",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "doctrine/doctrine-bundle": "^2.10",
+        "doctrine/doctrine-migrations-bundle": "^3.2",
+        "doctrine/mongodb-odm-bundle": "^4.5",
         "elasticsearch/elasticsearch": "^8.8",
+        "fakerphp/faker": "^1.23",
         "mongodb/mongodb": "^1.16",
         "symfony/console": "6.3.*",
         "symfony/dotenv": "6.3.*",
@@ -61,8 +65,11 @@
     },
     "extra": {
         "symfony": {
-            "allow-contrib": false,
+            "allow-contrib": "true",
             "require": "6.3.*"
         }
+    },
+    "require-dev": {
+        "symfony/maker-bundle": "^1.50"
     }
 }

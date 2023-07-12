@@ -4,31 +4,40 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use MongoDB\Client;
+use App\Document\Product;
+use Doctrine\ODM\MongoDB\DocumentManager;
+use Faker\Factory;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
 
 class MongoLoadController extends AbstractController
 {
-    #[Route('/mongo/load', methods: ['GET'])]
-    public function load(): JsonResponse
+    public function __construct(private DocumentManager $documentManager)
     {
-        $mongo = new Client('mongodb://root:pass@mongo:27017');
+    }
 
-        $collection = $mongo->selectDatabase('test')->selectCollection('users');
+    #[Route('/products', methods: ['POST'])]
+    public function load(Request $request): JsonResponse
+    {
+        $name = $request->request->get('name');
+        $price = $request->request->get('price');
 
-        $result = $collection->insertOne([
-            'username' => 'admin',
-            'email' => 'admin@example.com',
-            'name' => 'Admin User',
-        ]);
+        $faker = Factory::create();
 
-        return new JsonResponse(
-            [
-                'InsertedId' => $result->getInsertedId(),
-                'InsertedCount' => $result->getInsertedCount(),
-            ]
-        );
+        $product = new Product($name.$faker->name, $price + $faker->randomFloat());
+        $this->documentManager->persist($product);
+        $this->documentManager->flush();
+
+        $repository = $this->documentManager->getRepository(Product::class);
+        $collection = $repository->createQueryBuilder()
+            ->sort('id', 'DESC')
+            ->limit(15)
+            ->getQuery()->execute();
+
+        $result = array_map(fn (Product $product) => $product->toArray(), $collection->toArray());
+
+        return new JsonResponse($result);
     }
 }
