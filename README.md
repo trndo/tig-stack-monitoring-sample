@@ -14,6 +14,11 @@ Monitoring containers:
 ## Start
 Run command `./start.sh` to start the project
 
+## Siege Testing
+1. Install `siege` on your machine
+2. Run command `./run-siege.sh` to run stress test
+
+
 ## Loading System
 1. Install `siege` tool for loading
 2. Run `siege -r"{repeat count}" -c"{concurrency}" {http://yourexamplapiendpoint.com}` with needed api endpoints to start loading system
